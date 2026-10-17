@@ -346,73 +346,48 @@
 
     // Richiede i dati tramite JSONP: permette di leggere il risultato
     // anche quando il sito e Apps Script si trovano su origini diverse.
-    function leggiDati(timeoutMs = 10000) {
-      return new Promise((resolve, reject) => {
-        const callbackName =
-          "gildaJsonp_" + Date.now() + "_" + (++jsonpCounter);
+    function leggiDati() {
+  return new Promise((resolve, reject) => {
+    const callback = "callbackGilda_" +
+      Date.now() + "_" +
+      Math.floor(Math.random() * 100000);
 
-        const script = document.createElement("script");
-        let terminato = false;
+    const script = document.createElement("script");
+    const separatore = SCRIPT_URL.includes("?") ? "&" : "?";
 
-        const timeoutId = setTimeout(() => {
-          termina(new Error(
-            "Timeout: Google Apps Script non ha risposto."
-          ));
-        }, timeoutMs);
+    const timeout = setTimeout(() => {
+      delete window[callback];
+      script.remove();
+      reject(new Error("Timeout durante la lettura del registro."));
+    }, 15000);
 
-        function pulisci() {
-          clearTimeout(timeoutId);
-          script.remove();
+    window[callback] = function (dati) {
+      clearTimeout(timeout);
+      script.remove();
+      delete window[callback];
 
-          try {
-            delete window[callbackName];
-          } catch (_) {
-            window[callbackName] = undefined;
-          }
-        }
+      if (!Array.isArray(dati)) {
+        reject(new Error("Google Apps Script non ha restituito una lista di dati."));
+        return;
+      }
 
-        function termina(errore, dati) {
-          if (terminato) return;
-          terminato = true;
-          pulisci();
+      resolve(dati);
+    };
 
-          if (errore) {
-            reject(errore);
-          } else {
-            resolve(dati);
-          }
-        }
+    script.onerror = function () {
+      clearTimeout(timeout);
+      delete window[callback];
+      script.remove();
+      reject(new Error("Errore nel caricamento della risposta di Google Apps Script."));
+    };
 
-        window[callbackName] = dati => {
-          if (!Array.isArray(dati)) {
-            termina(new Error(
-              dati && dati.message
-                ? dati.message
-                : "Risposta non valida dal server."
-            ));
-            return;
-          }
+    script.src = SCRIPT_URL + separatore +
+      "callback=" + encodeURIComponent(callback) +
+      "&_=" + Date.now();
 
-          termina(null, dati);
-        };
-
-        script.onerror = () => {
-          termina(new Error(
-            "Impossibile contattare Google Apps Script. " +
-            "Controlla URL e pubblicazione."
-          ));
-        };
-
-        const separatore = SCRIPT_URL.includes("?") ? "&" : "?";
-
-        script.src =
-          SCRIPT_URL + separatore +
-          "callback=" + encodeURIComponent(callbackName) +
-          "&t=" + Date.now();
-
-        document.head.appendChild(script);
-      });
-    }
+    document.head.appendChild(script);
+  });
+}
 
     function renderizzaRisultati(dati) {
       for (const pg of personaggi) {
