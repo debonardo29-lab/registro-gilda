@@ -1,0 +1,597 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Gilda - Registro Personaggi</title>
+
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #ffffff;
+      --accent-color: #ff9800;
+      --success-color: #4caf50;
+      --error-color: #ff5252;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .setup-section, .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .setup-section {
+      text-align: center;
+    }
+
+    select, button {
+      padding: 10px;
+      margin: 8px 5px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+
+    select {
+      background: #333;
+      color: white;
+      width: 100%;
+    }
+
+    #player-select {
+      max-width: 300px;
+      margin-top: 12px;
+    }
+
+    button {
+      background: var(--accent-color);
+      color: #111;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      text-align: center;
+      margin-bottom: 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .card img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent-color);
+    }
+
+    .card h3 {
+      margin: 10px 0 18px;
+      font-size: 22px;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .controls label {
+      font-size: 13px;
+      color: #bbb;
+      margin-top: 5px;
+    }
+
+    .controls > select {
+      width: 90%;
+      margin: 0;
+    }
+
+    .incise-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .incise-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 33.33%;
+      min-width: 0;
+    }
+
+    .incise-col span {
+      font-size: 11px;
+      color: #aaa;
+      margin-bottom: 5px;
+    }
+
+    .incise-col select {
+      margin: 0;
+      padding: 8px 2px;
+      font-size: 14px;
+    }
+
+    .save-btn {
+      background: var(--success-color);
+      color: white;
+      width: 100%;
+      margin: 12px 0 0;
+    }
+
+    .results-box {
+      margin-top: 16px;
+      font-size: 13px;
+      text-align: left;
+      border-top: 1px solid #444;
+      padding-top: 12px;
+      color: #ddd;
+      overflow-wrap: anywhere;
+    }
+
+    .result-row {
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+      line-height: 1.6;
+    }
+
+    .status {
+      margin: 12px 0 0;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .status:empty {
+      display: none;
+    }
+
+    .status.success {
+      background: #18351d;
+      color: #b9f6ca;
+    }
+
+    .status.error {
+      background: #3b1919;
+      color: #ffcdd2;
+    }
+
+    .status.info {
+      background: #252b35;
+      color: #d6e4ff;
+    }
+
+    .muted {
+      color: #999;
+      font-style: italic;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      font-size: 12px;
+      margin-top: 25px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Registro Personaggi della Gilda</h1>
+
+    <section class="setup-section">
+      <label for="player-select">
+        <strong>Seleziona il tuo nome:</strong>
+      </label>
+      <br>
+
+      <select id="player-select">
+        <option value="">-- Scegli chi sei --</option>
+        <option value="Filippo">Filippo</option>
+        <option value="Debonardo">Debonardo</option>
+        <option value="Francesco">Francesco</option>
+      </select>
+
+      <div id="global-status" class="status" role="status"
+           aria-live="polite"></div>
+    </section>
+
+    <h2>Lista Personaggi</h2>
+
+    <div class="grid" id="characters-grid"></div>
+
+    <footer>
+      Registro condiviso della gilda
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    // URL del deployment Google Apps Script.
+    const SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbzv3YWfwoiV45Jyvac0uT9i_wdMfn31k8pARhvOWvZNdlhEI-zgCIfExbqLuuAoREN5hg/exec";
+
+    const giocatoriConsentiti = [
+      "Filippo",
+      "Debonardo",
+      "Francesco"
+    ];
+
+    const personaggi = [
+      {
+        name: "Meliodas",
+        img: "https://placehold.co/180x180?text=Meliodas"
+      },
+      {
+        name: "Ban",
+        img: "https://placehold.co/180x180?text=Ban"
+      },
+      {
+        name: "Lancelot",
+        img: "https://placehold.co/180x180?text=Lancelot"
+      }
+    ];
+
+    const grid = document.getElementById("characters-grid");
+    const playerSelect = document.getElementById("player-select");
+    const globalStatus = document.getElementById("global-status");
+
+    let jsonpCounter = 0;
+
+    function mostraStato(elemento, messaggio, tipo) {
+      elemento.textContent = messaggio;
+      elemento.className = "status " + tipo;
+    }
+
+    function generaOpzioni(min, max, suffisso = "") {
+      let html = "";
+
+      for (let i = min; i <= max; i++) {
+        html += `<option value="${i}">${i}${suffisso}</option>`;
+      }
+
+      return html;
+    }
+
+    function creaSchede() {
+      for (const pg of personaggi) {
+        const card = document.createElement("section");
+        card.className = "card";
+
+        card.innerHTML = `
+          <img src="${pg.img}" alt="${pg.name}" loading="lazy">
+          <h3>${pg.name}</h3>
+
+          <div class="controls">
+            <label for="stars-${pg.name}">Stellaggio</label>
+            <select id="stars-${pg.name}">
+              ${generaOpzioni(0, 10, " ★")}
+            </select>
+
+            <label>Trascendenza Incise (da 1 a 14)</label>
+
+            <div class="incise-row">
+              ${[1, 2, 3].map(n => `
+                <div class="incise-col">
+                  <span>Inc. ${n}</span>
+                  <select id="inc${n}-${pg.name}"
+                          aria-label="Incisa ${n} di ${pg.name}">
+                    ${generaOpzioni(1, 14)}
+                  </select>
+                </div>
+              `).join("")}
+            </div>
+
+            <button class="save-btn" type="button"
+                    id="save-${pg.name}">
+              Aggiorna dati
+            </button>
+          </div>
+
+          <div class="status" id="status-${pg.name}"
+               role="status" aria-live="polite"></div>
+
+          <div class="results-box" id="results-${pg.name}">
+            <strong>Livelli di Gilda</strong>
+            <p class="muted">Caricamento dati...</p>
+          </div>
+        `;
+
+        grid.appendChild(card);
+
+        document.getElementById(`save-${pg.name}`)
+          .addEventListener("click", () => salvaDati(pg.name));
+      }
+    }
+
+    // Richiede i dati tramite JSONP: permette di leggere il risultato
+    // anche quando il sito e Apps Script si trovano su origini diverse.
+    function leggiDati(timeoutMs = 10000) {
+      return new Promise((resolve, reject) => {
+        const callbackName =
+          "gildaJsonp_" + Date.now() + "_" + (++jsonpCounter);
+
+        const script = document.createElement("script");
+        let terminato = false;
+
+        const timeoutId = setTimeout(() => {
+          termina(new Error(
+            "Timeout: Google Apps Script non ha risposto."
+          ));
+        }, timeoutMs);
+
+        function pulisci() {
+          clearTimeout(timeoutId);
+          script.remove();
+
+          try {
+            delete window[callbackName];
+          } catch (_) {
+            window[callbackName] = undefined;
+          }
+        }
+
+        function termina(errore, dati) {
+          if (terminato) return;
+          terminato = true;
+          pulisci();
+
+          if (errore) {
+            reject(errore);
+          } else {
+            resolve(dati);
+          }
+        }
+
+        window[callbackName] = dati => {
+          if (!Array.isArray(dati)) {
+            termina(new Error(
+              dati && dati.message
+                ? dati.message
+                : "Risposta non valida dal server."
+            ));
+            return;
+          }
+
+          termina(null, dati);
+        };
+
+        script.onerror = () => {
+          termina(new Error(
+            "Impossibile contattare Google Apps Script. " +
+            "Controlla URL e pubblicazione."
+          ));
+        };
+
+        const separatore = SCRIPT_URL.includes("?") ? "&" : "?";
+
+        script.src =
+          SCRIPT_URL + separatore +
+          "callback=" + encodeURIComponent(callbackName) +
+          "&t=" + Date.now();
+
+        document.head.appendChild(script);
+      });
+    }
+
+    function renderizzaRisultati(dati) {
+      for (const pg of personaggi) {
+        const container =
+          document.getElementById(`results-${pg.name}`);
+
+        container.replaceChildren();
+
+        const titolo = document.createElement("strong");
+        titolo.textContent = "Livelli di Gilda";
+        container.appendChild(titolo);
+
+        const righe = dati.filter(r =>
+          r.personaggio === pg.name
+        );
+
+        if (righe.length === 0) {
+          const messaggio = document.createElement("p");
+          messaggio.className = "muted";
+          messaggio.textContent = "Nessun dato inserito.";
+          container.appendChild(messaggio);
+          continue;
+        }
+
+        for (const riga of righe) {
+          const elemento = document.createElement("div");
+          elemento.className = "result-row";
+
+          const nome = document.createElement("strong");
+          nome.textContent = String(riga.giocatore ?? "Sconosciuto");
+
+          const dettagli = document.createElement("div");
+          dettagli.textContent =
+            `${riga.stellaggio || "—"} | ` +
+            `${riga.incisa1 || "—"}, ` +
+            `${riga.incisa2 || "—"}, ` +
+            `${riga.incisa3 || "—"}`;
+
+          elemento.append(nome, dettagli);
+          container.appendChild(elemento);
+        }
+      }
+    }
+
+    async function caricaRisultati() {
+      try {
+        const dati = await leggiDati();
+        renderizzaRisultati(dati);
+
+        mostraStato(
+          globalStatus,
+          "Dati della gilda aggiornati.",
+          "success"
+        );
+      } catch (errore) {
+        console.error("Errore caricamento:", errore);
+
+        mostraStato(
+          globalStatus,
+          "Non riesco a leggere il registro. " + errore.message,
+          "error"
+        );
+      }
+    }
+
+    function leggiValoriPersonaggio(nome) {
+      return {
+        giocatore: playerSelect.value,
+        personaggio: nome,
+        stellaggio: document.getElementById(`stars-${nome}`).value
+          + " ★",
+        incisa1: "Inc.1: T" +
+          document.getElementById(`inc1-${nome}`).value,
+        incisa2: "Inc.2: T" +
+          document.getElementById(`inc2-${nome}`).value,
+        incisa3: "Inc.3: T" +
+          document.getElementById(`inc3-${nome}`).value
+      };
+    }
+
+    function datiCoincidono(riga, attesi) {
+      return riga &&
+        riga.giocatore === attesi.giocatore &&
+        riga.personaggio === attesi.personaggio &&
+        riga.stellaggio === attesi.stellaggio &&
+        riga.incisa1 === attesi.incisa1 &&
+        riga.incisa2 === attesi.incisa2 &&
+        riga.incisa3 === attesi.incisa3;
+    }
+
+    // Il POST no-cors non rende leggibile la risposta.
+    // Perciò verifichiamo la scrittura con una successiva lettura JSONP.
+    async function salvaDati(nome) {
+      const giocatore = playerSelect.value;
+      const bottone = document.getElementById(`save-${nome}`);
+      const stato = document.getElementById(`status-${nome}`);
+
+      if (!giocatoriConsentiti.includes(giocatore)) {
+        mostraStato(
+          stato,
+          "Seleziona prima il tuo nome.",
+          "error"
+        );
+        return;
+      }
+
+      const payload = leggiValoriPersonaggio(nome);
+
+      bottone.disabled = true;
+      mostraStato(stato, "Invio e verifica dei dati in corso...", "info");
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Un POST no-cors non prova da solo che la scrittura sia riuscita.
+        // Cerchiamo quindi il valore aggiornato nel foglio.
+        let confermato = false;
+
+        for (let tentativo = 0; tentativo < 6; tentativo++) {
+          if (tentativo > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          const dati = await leggiDati();
+
+          const riga = dati.find(r =>
+            r.giocatore === payload.giocatore &&
+            r.personaggio === payload.personaggio
+          );
+
+          if (datiCoincidono(riga, payload)) {
+            renderizzaRisultati(dati);
+            confermato = true;
+            break;
+          }
+        }
+
+        if (!confermato) {
+          throw new Error(
+            "Il server non ha confermato i valori inviati. " +
+            "Controlla le esecuzioni di Apps Script e il foglio Dati."
+          );
+        }
+
+        mostraStato(
+          stato,
+          `Salvataggio verificato per ${nome} (${giocatore}).`,
+          "success"
+        );
+
+        mostraStato(
+          globalStatus,
+          "I dati sono stati verificati nel registro condiviso.",
+          "success"
+        );
+
+      } catch (errore) {
+        console.error("Errore salvataggio:", errore);
+
+        mostraStato(
+          stato,
+          "Salvataggio non verificato: " + errore.message,
+          "error"
+        );
+      } finally {
+        bottone.disabled = false;
+      }
+    }
+
+    creaSchede();
+    caricaRisultati();
+  </script>
+</body>
+</html>
